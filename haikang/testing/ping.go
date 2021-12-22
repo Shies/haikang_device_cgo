@@ -63,8 +63,8 @@ const xmlschema = `
 </PersonInfoExtendList>
 16377675381830746D833CE9F69245F7AC12EF31682A91616AE426306102402EA662B1337DE9C238
 <FDDescription>
-	<name>唐家墩小学考勤</name>
-	<phoneNumber>18672913866</phoneNumber>
+	<name>教育云考勤</name>
+	<phoneNumber>188xxxxxxxx</phoneNumber>
 	<prompt>欢迎光临</prompt>
 </FDDescription>
 </XmlSchema>
@@ -116,7 +116,7 @@ func digestPost(host string, uri string, postBody []byte) bool {
 	if err != nil {
 		panic(err)
 	}
-	result, _ := UploadImg(body, "https://oss.school.xiaodi24.com/upload/image")
+	result, _ := UploadImg(body, "https://oss.school.xxx.com/upload/image")
 	fmt.Println(result)
 	return true
 }
