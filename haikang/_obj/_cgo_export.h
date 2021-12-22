@@ -19,6 +19,15 @@ typedef struct { const char *p; ptrdiff_t n; } _GoString_;
 /* Start of preamble from import "C" comments.  */
 
 
+#line 3 "gocallback.go"
+
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#line 1 "cgo-generated-wrapper"
 
 
 /* End of preamble from import "C" comments.  */
@@ -70,7 +79,7 @@ extern "C" {
 
 extern void GoRealDataCallBack(int lRealHandle, unsigned int dwDataType, unsigned char* pBuffer, unsigned int dwBufSize, void* pUser);
 extern void GoCatchErrorCallback(unsigned int dwType, int lUserID, int lHandle, void* pUser);
-extern GoUint8 GoAlarmMsgCallback(int lCommand, void* pAlarmer, char* pAlarmInfo, unsigned int dwBufLen, void* pUser);
+extern GoUint8 GoAlarmMsgCallback(int lCommand, void* pAlarmer, void* pAlarmInfo, unsigned int dwBufLen, void* pUser);
 
 #ifdef __cplusplus
 }

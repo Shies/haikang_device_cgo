@@ -3,41 +3,332 @@
 //line /home/zhaoxuewang/go_device_haikang/app/api/haikang/gocallback.go:1:1
 package haikang
 
+/*
+#cgo CXXFLAGS: -I./
+#cgo LDFLAGS: -L. -Wl,-rpath=./:./lib:./lib/HCNetSDKCom -lhcnetsdk -lstdc++
+#cgo LDFLAGS: -L. -ldevice_handler -lstdc++
+#include <stdio.h>
+#include <stdlib.h>
+#include "DeviceHandler.h"
+*/
 import _ "unsafe"
 import (
-	"unsafe"
+	"bytes"
+	"crypto/md5"
+	"crypto/rand"
+	"crypto/tls"
+	"encoding/hex"
+	"encoding/xml"
 	"fmt"
+	"go_device_haikang/app/gdb"
+	"io"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+	"unsafe"
+
+	"go_device_haikang/utils/request"
+	"go_device_haikang/utils/util"
+)
+
+const (
+	RemoteInfoUrl   = "/v21/haikang/open/device/scheme"
+	RemoteConfigUrl = "/v21/haikang/open/device/health"
+	RemoteLogUrl    = "/v21/haikang/open/device/log"
+	RemoteRecordUrl = "/v21/haikang/open/device/record"
 )
 
 //export GoRealDataCallBack
-func GoRealDataCallBack(lRealHandle  /*line :10:37*/_Ctype_int /*line :10:42*/, dwDataType  /*line :10:55*/_Ctype_uint /*line :10:61*/, pBuffer * /*line :10:72*/_Ctype_uchar /*line :10:79*/, dwBufSize  /*line :10:91*/_Ctype_uint /*line :10:97*/, pUser unsafe.Pointer) {
+func GoRealDataCallBack(lRealHandle  /*line :42:37*/_Ctype_int /*line :42:42*/, dwDataType  /*line :42:55*/_Ctype_uint /*line :42:61*/, pBuffer * /*line :42:72*/_Ctype_uchar /*line :42:79*/, dwBufSize  /*line :42:91*/_Ctype_uint /*line :42:97*/, pUser unsafe.Pointer) {
 	fmt.Println("GoRealDataCallBack")
-	fmt.Println( /*line :12:14*/_Ctype_uint /*line :12:20*/(dwBufSize))
-	fmt.Println((* /*line :13:16*/_Ctype_char /*line :13:22*/)(unsafe.Pointer(pBuffer)))
-	fmt.Println( /*line :14:14*/_Ctype_int /*line :14:19*/(lRealHandle))
-	fmt.Println( /*line :15:14*/_Ctype_uint /*line :15:20*/(dwDataType))
-	fmt.Println((* /*line :16:16*/_Ctype_struct_RealPlayInfo /*line :16:37*/)(pUser))
+	fmt.Println( /*line :44:14*/_Ctype_uint /*line :44:20*/(dwBufSize))
+	fmt.Println((* /*line :45:16*/_Ctype_char /*line :45:22*/)(unsafe.Pointer(pBuffer)))
+	fmt.Println( /*line :46:14*/_Ctype_int /*line :46:19*/(lRealHandle))
+	fmt.Println( /*line :47:14*/_Ctype_uint /*line :47:20*/(dwDataType))
+	fmt.Println((* /*line :48:16*/_Ctype_struct_RealPlayInfo /*line :48:37*/)(pUser))
 	return
 }
 
 //export GoCatchErrorCallback
-func GoCatchErrorCallback(dwType  /*line :21:34*/_Ctype_uint /*line :21:40*/, lUserID  /*line :21:50*/_Ctype_int /*line :21:55*/, lHandle  /*line :21:65*/_Ctype_int /*line :21:70*/, pUser unsafe.Pointer) {
-	fmt.Println("GoCatchErrorCallback")
+func GoCatchErrorCallback(dwType  /*line :53:34*/_Ctype_uint /*line :53:40*/, lUserID  /*line :53:50*/_Ctype_int /*line :53:55*/, lHandle  /*line :53:65*/_Ctype_int /*line :53:70*/, pUser unsafe.Pointer) {
+	switch dwType {
 	// EXCEPTION_RECONNECT
-	fmt.Println( /*line :24:14*/_Ctype_uint /*line :24:20*/(dwType))
-	fmt.Println( /*line :25:14*/_Ctype_int /*line :25:19*/(lHandle))
-	fmt.Println( /*line :26:14*/_Ctype_int /*line :26:19*/(lUserID))
-	fmt.Println((* /*line :27:16*/_Ctype_uint /*line :27:22*/)(pUser))
+	case 0x8005:
+		fmt.Println("GoCatchErrorCallback")
+		fmt.Println( /*line :58:15*/_Ctype_uint /*line :58:21*/(dwType))
+		fmt.Println( /*line :59:15*/_Ctype_int /*line :59:20*/(lHandle))
+		fmt.Println( /*line :60:15*/_Ctype_int /*line :60:20*/(lUserID))
+		fmt.Println((* /*line :61:17*/_Ctype_uint /*line :61:23*/)(pUser), time.Now().Unix())
+	}
 	return
 }
 
 //export GoAlarmMsgCallback
-func GoAlarmMsgCallback(lCommand  /*line :32:34*/_Ctype_int /*line :32:39*/, pAlarmer unsafe.Pointer, pAlarmInfo * /*line :32:78*/_Ctype_char /*line :32:84*/, dwBufLen  /*line :32:95*/_Ctype_uint /*line :32:101*/, pUser unsafe.Pointer) bool {
-	fmt.Println("GoAlarmMsgCallback")
-	fmt.Println( /*line :34:14*/_Ctype_int /*line :34:19*/(lCommand))
-	fmt.Println((* /*line :35:16*/_Ctype_char /*line :35:22*/)(pAlarmInfo))
-	fmt.Println((* /*line :36:16*/_Ctype_struct_NET_DVR_ALARMER /*line :36:40*/)(pAlarmer))
-	fmt.Println( /*line :37:14*/_Ctype_uint /*line :37:20*/(dwBufLen))
-	fmt.Println((* /*line :38:16*/_Ctype_uint /*line :38:22*/)(pUser))
+func GoAlarmMsgCallback(lCommand  /*line :67:34*/_Ctype_int /*line :67:39*/, pAlarmer unsafe.Pointer, pAlarmInfo unsafe.Pointer, dwBufLen  /*line :67:102*/_Ctype_uint /*line :67:108*/, pUser unsafe.Pointer) bool {
+	alarm := (* /*line :68:13*/_Ctype_struct_NET_DVR_ALARMER /*line :68:37*/)(pAlarmer)
+	// fmt.Println("报警设备用户ID", alarm.lUserID, "\n")
+	httpPath := UserApi.Device.DevPath
+	switch lCommand {
+	// COMM_SNAP_MATCH_ALARM
+	case 0x2902:
+		match := (* /*line :74:14*/_Ctype_struct_NET_VCA_FACESNAP_MATCH_ALARM /*line :74:51*/)(pAlarmInfo)
+		if match == nil {
+			return false
+		}
+		uname := string(GetUchar32(match.struBlockListInfo.struBlockListInfo.struAttribute.byName))
+		err := StrToUtf8(&uname)
+		if err != nil {
+			log.Printf("%v", err)
+		}
+		var v XmlSchema
+		pExtendLen := int(match.struBlockListInfo.struBlockListInfo.struAttribute.dwPersonInfoExtendLen)
+		pExtendBuf := (* /*line :85:19*/_Ctype_char /*line :85:25*/)(unsafe.Pointer(match.struBlockListInfo.struBlockListInfo.struAttribute.pPersonInfoExtend))
+		if pExtendLen > 0 && pExtendBuf != nil {
+			schema := "<XmlSchema>" + ( /*line :87:30*/_Cfunc_GoString /*line :87:39*/)(pExtendBuf) + "</XmlSchema>"
+			err := xml.Unmarshal([]byte(schema), &v)
+			if err != nil {
+				log.Printf("%v", err)
+			}
+		}
+		record := DeviceRecord{
+			Address:     string(GetSchar16(match.struSnapInfo.struDevInfo.struDevIP.sIpV4)),
+			Port:        int(match.struSnapInfo.struDevInfo.wPort),
+			Channel:     int(match.struSnapInfo.struDevInfo.byChannel),
+			DVRName:     string(GetSchar32(alarm.sDeviceName)),
+			DVRSerialNo: string(GetUchar48(alarm.sSerialNumber)),
+			Mobile:      v.FDDesc.PhoneNumber,
+			NowTime:     time.Now().Unix(),
+			FDID:        int(match.struBlockListInfo.struBlockListInfo.dwGroupNo),
+			PID:         int(match.struBlockListInfo.struBlockListInfo.dwRegisterID),
+			Realname:    uname,
+			Username:    string(GetUchar32(match.struBlockListInfo.struBlockListInfo.struAttribute.byCertificateNumber)),
+		}
+		snapPicLen := int(match.struSnapInfo.dwSnapFacePicLen)
+		snapPicBuf := (* /*line :107:19*/_Ctype_char /*line :107:25*/)(unsafe.Pointer(match.struSnapInfo.pBuffer1))
+		if snapPicLen > 0 && snapPicBuf != nil {
+			if int(match.byPicTransType) > 0 {
+				lBuf := capStream(snapPicBuf,  /*line :110:35*/_Ctype_int /*line :110:40*/(snapPicLen))
+				if string(lBuf) != "" {
+					result, err := UploadImg(lBuf, UserApi.Device.OssPath)
+					if err != nil {
+						record.LogContent = "保存抓拍图片失败" + err.Error()
+						_, err := request.HttpPost(httpPath+RemoteLogUrl, util.MarshalJson(record), nil)
+						if err != nil {
+							saveDeviceLog(record)
+						}
+					} else {
+						record.Images = []string{result.Url}
+						record.LogContent = util.MarshalJson(result)
+					}
+				} else {
+					record.LogContent = "保存抓拍图片失败"
+					_, err := request.HttpPost(httpPath+RemoteLogUrl, util.MarshalJson(record), nil)
+					if err != nil {
+						saveDeviceLog(record)
+					}
+				}
+			} else {
+				lBuf := func() []byte{ _cgo0 := /*line :131:23*/unsafe.Pointer(match.struSnapInfo.pBuffer1); var _cgo1 _Ctype_int = _Ctype_int /*line :131:73*/(snapPicLen); _cgoCheckPointer(_cgo0, nil); return _Cfunc_GoBytes(_cgo0, _cgo1); }()
+				result, err := UploadImg(lBuf, UserApi.Device.OssPath)
+				if err != nil {
+					record.LogContent = "保存抓拍图片失败" + err.Error()
+					_, err := request.HttpPost(httpPath+RemoteLogUrl, util.MarshalJson(record), nil)
+					if err != nil {
+						saveDeviceLog(record)
+					}
+				} else {
+					record.Images = []string{result.Url}
+					record.LogContent = util.MarshalJson(result)
+				}
+			}
+			_, err := request.HttpPost(httpPath+RemoteRecordUrl, util.MarshalJson(record), nil)
+			if err != nil {
+				saveDeviceRecord(record)
+			}
+		}
+		blockPicLen := int(match.struBlockListInfo.dwBlockListPicLen)
+		blockPicBuf := (* /*line :150:20*/_Ctype_char /*line :150:26*/)(unsafe.Pointer(match.struBlockListInfo.pBuffer1))
+		if blockPicLen > 0 && blockPicBuf != nil {
+			if int(match.byPicTransType) > 0 {
+				lBuf := capStream(blockPicBuf,  /*line :153:36*/_Ctype_int /*line :153:41*/(blockPicLen))
+				if string(lBuf) != "" {
+					result, err := UploadImg(lBuf, UserApi.Device.OssPath)
+					if err != nil {
+						record.LogContent = "保存黑名单人脸图片失败" + err.Error()
+						_, err := request.HttpPost(httpPath+RemoteLogUrl, util.MarshalJson(record), nil)
+						if err != nil {
+							saveDeviceLog(record)
+						}
+					} else {
+						record.Images = []string{result.Url}
+						record.LogContent = util.MarshalJson(result)
+					}
+				} else {
+					record.LogContent = "保存黑名单人脸图片失败"
+					_, err := request.HttpPost(httpPath+RemoteLogUrl, util.MarshalJson(record), nil)
+					if err != nil {
+						saveDeviceLog(record)
+					}
+				}
+			} else {
+				lBuf := func() []byte{ _cgo0 := /*line :174:23*/unsafe.Pointer(match.struBlockListInfo.pBuffer1); var _cgo1 _Ctype_int = _Ctype_int /*line :174:78*/(blockPicLen); _cgoCheckPointer(_cgo0, nil); return _Cfunc_GoBytes(_cgo0, _cgo1); }()
+				result, err := UploadImg(lBuf, UserApi.Device.OssPath)
+				if err != nil {
+					record.LogContent = "保存黑名单人脸图片失败" + err.Error()
+					_, err := request.HttpPost(httpPath+RemoteLogUrl, util.MarshalJson(record), nil)
+					if err != nil {
+						saveDeviceLog(record)
+					}
+				} else {
+					record.Images = []string{result.Url}
+					record.LogContent = util.MarshalJson(result)
+				}
+			}
+			_, err := request.HttpPost(httpPath+RemoteRecordUrl, util.MarshalJson(record), nil)
+			if err != nil {
+				saveDeviceRecord(record)
+			}
+		}
+	}
 	return false
+}
+
+func capStream(pBuf * /*line :196:22*/_Ctype_char /*line :196:28*/, pLen  /*line :196:35*/_Ctype_int /*line :196:40*/) []byte {
+	newHost := "https://" + UserApi.Device.Address + ":443"
+	rawurl := strings.Replace(( /*line :198:28*/_Cfunc_GoStringN /*line :198:38*/)(pBuf, pLen), "\n", "", -1)
+	paths, _ := url.Parse(rawurl)
+
+	newUrl := newHost + paths.Path + "?" + paths.Query().Encode()
+	method := "POST"
+	req, err := http.NewRequest(method, newUrl, nil)
+	req.Header.Set("Content-Type", "application/json")
+	//跳过证书验证
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("%v", err)
+		return []byte("")
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusUnauthorized {
+		log.Printf("Recieved status code '%v' auth skipped", resp.StatusCode)
+		return []byte("")
+	}
+	digestParts := digestParts(resp)
+	digestParts["uri"] = paths.Path + "?" + paths.Query().Encode()
+	digestParts["method"] = method
+	digestParts["username"] = UserApi.Device.Username
+	digestParts["password"] = UserApi.Device.Password
+	req, err = http.NewRequest(method, newUrl, bytes.NewBuffer([]byte("")))
+	req.Header.Set("Authorization", getDigestAuthrization(digestParts))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err = client.Do(req)
+	if err != nil {
+		log.Printf("%v", err)
+		return []byte("")
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return []byte("")
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("%v", err)
+		return []byte("")
+	}
+	return body
+}
+
+func digestParts(resp *http.Response) map[string]string {
+	result := map[string]string{}
+	if len(resp.Header["Www-Authenticate"]) > 0 {
+		wantedHeaders := []string{"nonce", "realm", "qop"}
+		responseHeaders := strings.Split(resp.Header["Www-Authenticate"][0], ",")
+		for _, r := range responseHeaders {
+			for _, w := range wantedHeaders {
+				if strings.Contains(r, w) {
+					result[w] = strings.Split(r, `"`)[1]
+				}
+			}
+		}
+	}
+	return result
+}
+
+func getMD5(text string) string {
+	hasher := md5.New()
+	hasher.Write([]byte(text))
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func getCnonce() string {
+	b := make([]byte, 8)
+	io.ReadFull(rand.Reader, b)
+	return fmt.Sprintf("%x", b)[:16]
+}
+
+func getDigestAuthrization(digestParts map[string]string) string {
+	d := digestParts
+	ha1 := getMD5(d["username"] + ":" + d["realm"] + ":" + d["password"])
+	ha2 := getMD5(d["method"] + ":" + d["uri"])
+	nonceCount := 00000001
+	cnonce := getCnonce()
+	response := getMD5(fmt.Sprintf("%s:%s:%v:%s:%s:%s", ha1, d["nonce"], nonceCount, cnonce, d["qop"], ha2))
+	authorization := fmt.Sprintf(`Digest username="%s", realm="%s", nonce="%s", uri="%s", cnonce="%s", nc="%v", qop="%s", response="%s"`,
+		d["username"], d["realm"], d["nonce"], d["uri"], cnonce, nonceCount, d["qop"], response)
+	return authorization
+}
+
+func saveDeviceRecord(device DeviceRecord) bool {
+	var hkRecord []gdb.DeviceRecord
+	hkRecord = append(hkRecord, gdb.DeviceRecord{
+		Id:         util.RandomUUID(),
+		DeviceId:   device.DVRSerialNo,
+		PictureUrl: device.Images[0],
+		UserId:     "",
+		SchoolId:   "",
+		AttendTime: device.NowTime * 1000,
+		AttendType: 300, // 刷脸
+		Status:     0,   // 打卡成功
+	})
+	if len(hkRecord) > 0 {
+		data := hkRecord[0]
+		if gdb.DB.Table(gdb.TableNameDevice).CreateInBatches(hkRecord, len(hkRecord)).RowsAffected <= 0 {
+			log.Printf("%s", "批量保存数据失败")
+		}
+		dlog := gdb.DeviceLog{}
+		dlog.Id = util.RandomUUID()
+		dlog.Username = device.Username
+		dlog.LogContent = util.MarshalJson(device)
+		dlog.DeviceId = data.DeviceId
+		dlog.RecordId = data.Id
+		gdb.DB.Table(gdb.TableNameDeviceLog).Create(&dlog)
+	}
+	return true
+}
+
+func saveDeviceLog(device DeviceRecord) bool {
+	var hkLog []gdb.DeviceLog
+	hkLog = append(hkLog, gdb.DeviceLog{
+		Id:         util.RandomUUID(),
+		DeviceId:   device.DVRSerialNo,
+		SchoolId:   "",
+		UserId:     "",
+		Username:   device.Username,
+		LogType:    1, // 错误日志类型
+		LogContent: util.MarshalJson(device),
+	})
+	if len(hkLog) > 0 {
+		if gdb.DB.Table(gdb.TableNameDeviceLog).CreateInBatches(hkLog, len(hkLog)).RowsAffected <= 0 {
+			log.Printf("%s", "批量保存数据失败")
+		}
+	}
+	return true
 }

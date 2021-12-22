@@ -8,18 +8,25 @@ using namespace std;
 
 // The gateway function
 void catchErrorCallback_cgo(DWORD dwType, LONG lUserID, LONG lHandle, void *pUser) {
-	GoCatchErrorCallback(dwType, lUserID, lHandle, pUser);
+    GoCatchErrorCallback(dwType, lUserID, lHandle, pUser);
 }
 void realDataCallBack_cgo(LONG lRealHandle, DWORD dwDataType, BYTE *pBuffer, DWORD dwBufSize, void *pUser) {
-	GoRealDataCallBack(lRealHandle, dwDataType, pBuffer, dwBufSize, pUser);
+    GoRealDataCallBack(lRealHandle, dwDataType, pBuffer, dwBufSize, pUser);
 }
 BOOL alarmMsgCallback_cgo(LONG lCommand, NET_DVR_ALARMER *pAlarmer, char *pAlarmInfo, DWORD dwBufLen, void *pUser) {
-    GoAlarmMsgCallback(lCommand, pAlarmer, pAlarmInfo, dwBufLen, pUser);
+    NET_VCA_FACESNAP_MATCH_ALARM struFaceMatchAlarm = {0};
+    memcpy(&struFaceMatchAlarm, pAlarmInfo, sizeof(NET_VCA_FACESNAP_MATCH_ALARM));
+    GoAlarmMsgCallback(lCommand, pAlarmer, &struFaceMatchAlarm, dwBufLen, pUser);
     return true;
 }
 
 void setupAlarmChan(LONG lUserID, LONG *returnHandle, MessageCallback fn) {
-    fn(1, NULL, NULL, 2, NULL);
+    /*
+    NET_VCA_FACESNAP_MATCH_ALARM struFaceMatchAlarm = {0};
+    char ip[16] = "127.0.0.1";
+    memcpy(struFaceMatchAlarm.sStorageIP, ip, strlen(ip));
+    GoAlarmMsgCallback(1, NULL, &struFaceMatchAlarm, 2, NULL);
+    */
     DeviceServiceIf *s = new DeviceServiceIf();
     s->setupAlarmChan(lUserID, returnHandle, fn);
     delete s;
@@ -33,6 +40,20 @@ void closeAlarmChan(LONG lHandle) {
     std::cout << "\n" << std::endl;
 }
 
+void SDKInit() {
+    DeviceServiceIf *s = new DeviceServiceIf();
+    s->SDKInit();
+    delete s;
+    // std::cout << "\n" << std::endl;
+}
+
+void clean() {
+    DeviceServiceIf *s = new DeviceServiceIf();
+    s->clean();
+    delete s;
+    // std::cout << "\n" << std::endl;
+}
+
 void checkHealth(HealthParam *param, ExceptionCallBack fn) {
     fn(1, 2, 3, NULL);
     DeviceServiceIf *s = new DeviceServiceIf();
@@ -41,39 +62,46 @@ void checkHealth(HealthParam *param, ExceptionCallBack fn) {
     std::cout << "\n" << std::endl;
 }
 
-void login(Scheme *scheme, BOOL useAsync, LoginDeviceDto *dto) {
+void login(Scheme *scheme, BOOL async, LoginDeviceDto *dto) {
     DeviceServiceIf *s = new DeviceServiceIf(scheme);
-    s->login(useAsync, dto);
+    s->login(async, dto);
     delete s;
-    std::cout << "\n" << std::endl;
+    //std::cout << "\n" << std::endl;
+}
+
+void active(LONG lUserID, LONG *status) {
+    DeviceServiceIf *s = new DeviceServiceIf();
+    s->active(lUserID, status);
+    delete s;
+    //std::cout << "\n" << std::endl;
 }
 
 void logout(LONG lUserID) {
     DeviceServiceIf *s = new DeviceServiceIf();
     s->logout(lUserID);
     delete s;
-    std::cout << "\n" << std::endl;
+    //std::cout << "\n" << std::endl;
 }
 
 void localIp(LocalIpDto *dto) {
     DeviceServiceIf *s = new DeviceServiceIf();
     s->localIp(dto);
     delete s;
-    std::cout << "\n" << std::endl;
+    //std::cout << "\n" << std::endl;
 }
 
-void iPByResolveSvr(IPByResolveSvrParam *in, IPByResolveSvrDto *dto) {
+void iPByResolveSvr(ResolveSvrParam *in, ResolveSvrDto *dto) {
     DeviceServiceIf *s = new DeviceServiceIf();
     s->iPByResolveSvr(in, dto);
     delete s;
-    std::cout << "\n" << std::endl;
+    //std::cout << "\n" << std::endl;
 }
 
-void iPParaCfg(LONG lUserID, LONG lChannel, IPParaCfgDto *dto) {
+void getDVRConfig(LONG lUserID, LONG lChannel, NET_DVR_IPPARACFG_V40 *dto) {
     DeviceServiceIf *s = new DeviceServiceIf();
-    s->iPParaCfg(lUserID, lChannel, dto);
+    s->getDVRConfig(lUserID, lChannel, dto);
     delete s;
-    std::cout << "\n" << std::endl;
+    //std::cout << "\n" << std::endl;
 }
 
 void realPlay(RealPlayParam *in, StdDataCallBack fn) {
@@ -81,65 +109,82 @@ void realPlay(RealPlayParam *in, StdDataCallBack fn) {
     DeviceServiceIf *s = new DeviceServiceIf();
     s->realPlay(in, fn);
     delete s;
-    std::cout << "\n" << std::endl;
+    //std::cout << "\n" << std::endl;
 }
 
 void realStopPlay(LONG lRealPlayHandle) {
     DeviceServiceIf *s = new DeviceServiceIf();
     s->realStopPlay(lRealPlayHandle);
     delete s;
-    std::cout << "\n" << std::endl;
+    //std::cout << "\n" << std::endl;
 }
 
 void realCapPicture(LONG lRealPlayHandle, RealCapPictureDto *dto) {
     DeviceServiceIf *s = new DeviceServiceIf();
     s->realCapPicture(lRealPlayHandle, dto);
     delete s;
-    std::cout << "\n" << std::endl;
+    //std::cout << "\n" << std::endl;
 }
 
 void capPicture(LONG lUserID, LONG lChannel, CapPictureDto *dto) {
     DeviceServiceIf *s = new DeviceServiceIf();
     s->capPicture(lUserID, lChannel, dto);
     delete s;
-    std::cout << "\n" << std::endl;
+    //std::cout << "\n" << std::endl;
+}
+
+void stdXmlConfig(LONG lUserID, char *url, char *inbuf, char *outbuf, char *statbuf) {
+    DeviceServiceIf *s = new DeviceServiceIf();
+    s->stdXmlConfig(lUserID, url, inbuf, outbuf, statbuf);
+    delete s;
+    //std::cout << "\n" << std::endl;
+}
+
+void getSadpInfoList(LONG lUserID, NET_DVR_SADPINFO_LIST *lpSadpInfoList) {
+    DeviceServiceIf *s = new DeviceServiceIf();
+    s->getSadpInfoList(lUserID, lpSadpInfoList);
+    delete s;
+    //std::cout << "\n" << std::endl;
+}
+
+void getPicture(LONG lUserID, char *sDVRFileName, CapPictureDto *dto) {
+    DeviceServiceIf *s = new DeviceServiceIf();
+    s->getPicture(lUserID, sDVRFileName, dto);
+    delete s;
+    //std::cout << "\n" << std::endl;
 }
 
 /*
 int main()
 {
-    int serverPort = 8000;
-    char serverIp[16] = "192.168.5.1";
-    char DVRName[256] = "海康威视";
-    char DVRNumber[256] = "321321";
-
-    IPByResolveSvrParam param = {0};
-    param.sServerIP = serverIp;
-    param.wServerPort = serverPort;
-    param.sDVRName = (BYTE *) DVRName;
-    param.sDVRSerialNumber = (BYTE *)DVRNumber;
-
-    RealPlayParam realParam = {0};
-    realParam.lUserID = 0;
-    realParam.lChannel = 0;
-
     Scheme scheme;
     DeviceServiceIf *s = new DeviceServiceIf();
     scheme = s->init("192.168.5.165", "admin", "zxw123456", 8000, 1);
 
-    checkHealth(catchErrorCallback_cgo);
+//    checkHealth(catchErrorCallback_cgo);
+
     LoginDeviceDto dto = {0};
     login(&scheme, false, &dto);
     printf("%d\n", dto.lUserID);
     printf("%d\n", dto.device.struDeviceV30.byStartChan);
 
-    CapPictureDto capDto = {0};
-    capPicture(dto.lUserID, dto.device.struDeviceV30.byStartChan, &capDto);
-    printf("%d\n", capDto.lpSizeReturned);
-    for (int i = 0; i < 204800; i++) {
-        printf("%d", capDto.sJpegPicBuffer[i]);
-    }
-    logout(dto.lUserID);
+//    CapPictureDto capDto = {0};
+//    capPicture(dto.lUserID, dto.device.struDeviceV30.byStartChan, &capDto);
+//    printf("%d\n", capDto.lpSizeReturned);
+//    for (int i = 0; i < 204800; i++) {
+//        printf("%d", capDto.sJpegPicBuffer[i]);
+//    }
+
+    char url[512];
+    char inbuf[10240];
+    char outbuf[10240];
+    char statbuf[1024];
+    sprintf(url, "%s", "GET /ISAPI/Intelligent/FDLib/capabilities\r\n");
+    stdXmlConfig(dto.lUserID, url, inbuf, outbuf, statbuf);
+    printf("%s\n", statbuf);
+    printf("%s\n", outbuf);
+
+    // logout(dto.lUserID);
     delete s;
     return 0;
 }

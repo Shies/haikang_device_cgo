@@ -9,73 +9,155 @@ package haikang
 #include "DeviceHandler.h"
 */
 import "C"
-
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
-	"io"
-	"io/ioutil"
-	"mime/multipart"
-	"net/http"
 	"unsafe"
 
-	s "./service"
+	"go_device_haikang/app/config"
+	"go_device_haikang/utils/response"
+
+	"github.com/gin-gonic/gin"
 )
 
-const OssPath = "http://oss-path/upload/image"
 var UserApi = NewUserApi(context.Background())
-var TempResolveParam = &IPByResolveSvrParam{
-	ServerIP:        "127.0.0.1",
-	ServerPort:      8000,
-	DVRName:         "海康威视",
-	DVRSerialNumber: "123456",
-}
-
 type userApi struct {
-	Service *s.Service
+	Device  *config.Device
+	Service *Service
 }
 
 func NewUserApi(ctx context.Context) *userApi {
 	a := &userApi{
-		Service: s.NewService(ctx),
+		Service: NewService(ctx),
+		Device: config.DeviceConfig,
 	}
 
 	return a
 }
 
-func RegisterRouterNoAuth() {
-	/*
+func RegisterRouterNoAuth(g *gin.RouterGroup) {
+	g.POST("/user/get/extend/config", getExtendConfig)
+	g.POST("/user/resolve/device/ip", resolveIp)
+	g.POST("/user/setup/alarm/chan", setupAlarmChan)
+	g.POST("/user/close/alarm/chan", closeAlarmChan)
 	g.POST("/user/ping", ping)
 	g.POST("/user/login", login)
 	g.POST("/user/logout", logout)
 	g.POST("/user/active", active)
 	g.POST("/user/local/ip", localIp)
 	g.POST("/user/resolve/server/ip", iPByResolveSvr)
-	g.POST("/user/ip/config/param", iPParaCfg)
+	g.POST("/user/get/dvr/config", getDVRConfig)
 	g.POST("/user/real/play", realPlay)
 	g.POST("/user/real/stop/play", realStopPlay)
 	g.POST("/user/real/cap/picture", realCapPicture)
 	g.POST("/user/cap/picture", capPicture)
 	return
-	*/
 }
 
+// @summary 获取人脸比对库图片数据附加信息
+// @tags    海康对接-获取人脸比对库图片数据附加信息
+// @produce json
+// @Param param body PingParam true "附件信息参数"
+// @router  /haikang/user/get/extend/config [POST]
+// @success 200 {object} response.Response "获取成功"
+func getExtendConfig(c *gin.Context) {
+	param := LocalHealth(UserApi.Service.Device)
+	C.checkHealth(&param, (C.ExceptionCallBack)(unsafe.Pointer(C.catchErrorCallback_cgo)))
+
+	lDto := C.struct_LoginDeviceDto{}
+	scheme := GetCScheme(UserApi.Service.Scheme)
+	C.login(scheme, C.int(0), (*C.struct_LoginDeviceDto)(unsafe.Pointer(&lDto)))
+	lUserID := C.int(lDto.lUserID)
+
+	url := C.CString("GET /ISAPI/Intelligent/FDLib/0/picture/32")
+	defer C.free(unsafe.Pointer(url))
+	inch := C.CString("")
+	defer C.free(unsafe.Pointer(inch))
+	outch := C.CString("")
+	defer C.free(unsafe.Pointer(outch))
+	statch := C.CString("")
+	defer C.free(unsafe.Pointer(statch))
+
+	C.stdXmlConfig(lUserID, url, inch, outch, statch)
+	checkHealth := &PingParam{
+		Welcome: C.GoString(outch),
+	}
+	response.Success(c, checkHealth)
+	return
+}
+
+// @summary 发现设备
+// @tags    海康对接-发现设备
+// @produce json
+// @Param param body PingParam true "发现设备参数"
+// @router  /haikang/user/resolve/deivce/ip [POST]
+// @success 200 {object} response.Response "获取成功"
+func resolveIp(c *gin.Context) {
+	param := LocalHealth(UserApi.Service.Device)
+	C.checkHealth(&param, (C.ExceptionCallBack)(unsafe.Pointer(C.catchErrorCallback_cgo)))
+	checkHealth := &PingParam{
+		Welcome: "ok",
+	}
+	response.Success(c, checkHealth)
+	return
+}
 
 // @summary 心跳检测
 // @tags    海康对接-心跳检测
 // @produce json
 // @Param param body PingParam true "心跳检测参数"
 // @router  /haikang/user/ping [POST]
-// @success 200 {object} Response "获取成功"
-func ping() {
-	param := LocalHealth(UserApi.Service.Health)
+// @success 200 {object} response.Response "获取成功"
+func ping(c *gin.Context) {
+	param := LocalHealth(UserApi.Service.Device)
 	C.checkHealth(&param, (C.ExceptionCallBack)(unsafe.Pointer(C.catchErrorCallback_cgo)))
 	checkHealth := &PingParam{
 		Welcome: "ok",
 	}
-	fmt.Println(fmt.Printf("%v\n", checkHealth))
+	response.Success(c, checkHealth)
+	return
+}
+
+// @summary 布防报警
+// @tags    海康对接-布防报警
+// @produce json
+// @Param param body PingParam true "布防报警参数"
+// @router  /haikang/user/setup/alarm/chan [POST]
+// @success 200 {object} response.Response "获取成功"
+func setupAlarmChan(c *gin.Context) {
+	param := LocalHealth(UserApi.Service.Device)
+	C.checkHealth(&param, (C.ExceptionCallBack)(unsafe.Pointer(C.catchErrorCallback_cgo)))
+
+	lDto := C.struct_LoginDeviceDto{}
+	scheme := GetCScheme(UserApi.Service.Scheme)
+	C.login(scheme, C.int(0), (*C.struct_LoginDeviceDto)(unsafe.Pointer(&lDto)))
+	lUserID := C.int(lDto.lUserID)
+
+	var lHandle int
+	C.setupAlarmChan(lUserID, (*C.int)(unsafe.Pointer(&lHandle)), (C.MessageCallback)(unsafe.Pointer(C.alarmMsgCallback_cgo)))
+	C.logout(lUserID)
+	checkHealth := &PingParam{
+		Welcome: lHandle,
+	}
+	response.Success(c, checkHealth)
+	return
+}
+
+// @summary 关闭报警
+// @tags    海康对接-关闭报警
+// @produce json
+// @Param param body PingParam true "关闭报警参数"
+// @router  /haikang/user/close/alarm/chan [POST]
+// @success 200 {object} response.Response "获取成功"
+func closeAlarmChan(c *gin.Context) {
+	param := LocalHealth(UserApi.Service.Device)
+	C.checkHealth(&param, (C.ExceptionCallBack)(unsafe.Pointer(C.catchErrorCallback_cgo)))
+
+	lHandle := 0
+	C.closeAlarmChan(C.int(lHandle))
+	checkHealth := &PingParam{
+		Welcome: lHandle,
+	}
+	response.Success(c, checkHealth)
 	return
 }
 
@@ -84,9 +166,22 @@ func ping() {
 // @produce json
 // @Param param body PingParam true "设备激活参数"
 // @router  /haikang/user/active [POST]
-// @success 200 {object} Response "获取成功"
-func active() {
-	fmt.Println(fmt.Printf("%v\n", nil))
+// @success 200 {object} response.Response "获取成功"
+func active(c *gin.Context) {
+	param := LocalHealth(UserApi.Service.Device)
+	C.checkHealth(&param, (C.ExceptionCallBack)(unsafe.Pointer(C.catchErrorCallback_cgo)))
+
+	lDto := C.struct_LoginDeviceDto{}
+	scheme := GetCScheme(UserApi.Service.Scheme)
+	C.login(scheme, C.int(0), (*C.struct_LoginDeviceDto)(unsafe.Pointer(&lDto)))
+	lUserID := C.int(lDto.lUserID)
+
+	dDto := C.struct_NET_DVR_SADPINFO_LIST{}
+	C.getSadpInfoList(lUserID, (*C.struct_NET_DVR_SADPINFO_LIST)(unsafe.Pointer(&dDto)))
+	checkHealth := &PingParam{
+		Welcome: C.ushort(dDto.wSadpNum),
+	}
+	response.Success(c, checkHealth)
 	return
 }
 
@@ -95,8 +190,8 @@ func active() {
 // @produce json
 // @Param param body PingParam true "设备登录参数"
 // @router  /haikang/user/login [POST]
-// @success 200 {object} Response "获取成功"
-func login() {
+// @success 200 {object} response.Response "获取成功"
+func login(c *gin.Context) {
 	CDto := C.struct_LoginDeviceDto{}
 
 	useAsync := 0
@@ -105,7 +200,7 @@ func login() {
 	checkHealth := &PingParam{
 		Welcome: C.int(CDto.lUserID),
 	}
-	fmt.Println(fmt.Printf("%v\n", checkHealth))
+	response.Success(c, checkHealth)
 	return
 }
 
@@ -114,14 +209,14 @@ func login() {
 // @produce json
 // @Param param body PingParam true "设备登出参数"
 // @router  /haikang/user/logout [POST]
-// @success 200 {object} Response "获取成功"
-func logout() {
+// @success 200 {object} response.Response "获取成功"
+func logout(c *gin.Context) {
 	lUserID := 0
 	C.logout(C.int(lUserID))
 	checkHealth := &PingParam{
 		Welcome: C.int(lUserID),
 	}
-	fmt.Println(fmt.Printf("%v\n", checkHealth))
+	response.Success(c, checkHealth)
 	return
 }
 
@@ -130,15 +225,15 @@ func logout() {
 // @produce json
 // @Param param body PingParam true "本地多网卡IP获取参数"
 // @router  /haikang/user/local/ip [POST]
-// @success 200 {object} Response "获取成功"
-func localIp() {
+// @success 200 {object} response.Response "获取成功"
+func localIp(c *gin.Context) {
 	CDto := C.struct_LocalIpDto{}
 
 	C.localIp((*C.struct_LocalIpDto)(unsafe.Pointer(&CDto)))
 	checkHealth := &PingParam{
 		Welcome: GetLocalIp(CDto.strIp),
 	}
-	fmt.Println(fmt.Printf("%v\n", checkHealth))
+	response.Success(c, checkHealth)
 	return
 }
 
@@ -147,16 +242,16 @@ func localIp() {
 // @produce json
 // @Param param body PingParam true "自动发现设备IP和端口"
 // @router  /haikang/user/resolve/server/ip [POST]
-// @success 200 {object} Response "获取成功"
-func iPByResolveSvr() {
-	CDto := C.struct_IPByResolveSvrDto{}
-	CParam := GetIpResolveParam(TempResolveParam)
+// @success 200 {object} response.Response "获取成功"
+func iPByResolveSvr(c *gin.Context) {
+	CDto := C.struct_ResolveSvrDto{}
+	CParam := GetIpResolveParam(nil)
 
-	C.iPByResolveSvr((*C.struct_IPByResolveSvrParam)(unsafe.Pointer(&CParam)), (*C.struct_IPByResolveSvrDto)(unsafe.Pointer(&CDto)))
+	C.iPByResolveSvr((*C.struct_ResolveSvrParam)(unsafe.Pointer(&CParam)), (*C.struct_ResolveSvrDto)(unsafe.Pointer(&CDto)))
 	checkHealth := &PingParam{
 		Welcome: C.GoString(CDto.sGetIP),
 	}
-	fmt.Println(fmt.Printf("%v\n", checkHealth))
+	response.Success(c, checkHealth)
 	return
 }
 
@@ -165,17 +260,17 @@ func iPByResolveSvr() {
 // @produce json
 // @Param param body PingParam true "系统参数配置"
 // @router  /haikang/user/ip/config/param [POST]
-// @success 200 {object} Response "获取成功"
-func iPParaCfg() {
+// @success 200 {object} response.Response "获取成功"
+func getDVRConfig(c *gin.Context) {
 	lUserID := 0
 	lChannel := 1
-	CDto := C.struct_IPParaCfgDto{}
+	CDto := C.struct_NET_DVR_IPPARACFG_V40{}
 
-	C.iPParaCfg(C.int(lUserID), C.int(lChannel), (*C.struct_IPParaCfgDto)(unsafe.Pointer(&CDto)))
+	C.getDVRConfig(C.int(lUserID), C.int(lChannel), (*C.struct_NET_DVR_IPPARACFG_V40)(unsafe.Pointer(&CDto)))
 	checkHealth := &PingParam{
-		Welcome: C.int(CDto.uiReturnLen),
+		Welcome: C.int(CDto.dwDChanNum),
 	}
-	fmt.Println(fmt.Printf("%v\n", checkHealth))
+	response.Success(c, checkHealth)
 	return
 }
 
@@ -184,17 +279,17 @@ func iPParaCfg() {
 // @produce json
 // @Param param body PingParam true "实时预览参数"
 // @router  /haikang/user/real/play [POST]
-// @success 200 {object} Response "获取成功"
-func realPlay() {
+// @success 200 {object} response.Response "获取成功"
+func realPlay(c *gin.Context) {
 	CParam := C.struct_RealPlayParam{
-		lUserID: C.int(0),
+		lUserID:  C.int(0),
 		lChannel: C.int(1),
 	}
 	C.realPlay((*C.struct_RealPlayParam)(unsafe.Pointer(&CParam)), (C.StdDataCallBack)(unsafe.Pointer(C.realDataCallBack_cgo)))
 	checkHealth := &PingParam{
 		Welcome: "ok",
 	}
-	fmt.Println(fmt.Printf("%v\n", checkHealth))
+	response.Success(c, checkHealth)
 	return
 }
 
@@ -203,14 +298,14 @@ func realPlay() {
 // @produce json
 // @Param param body PingParam true "停止预览参数"
 // @router  /haikang/user/real/stop/play [POST]
-// @success 200 {object} Response "获取成功"
-func realStopPlay() {
+// @success 200 {object} response.Response "获取成功"
+func realStopPlay(c *gin.Context) {
 	lRealPlayHandle := 0
 	C.realStopPlay(C.int(lRealPlayHandle))
 	checkHealth := &PingParam{
 		Welcome: C.int(lRealPlayHandle),
 	}
-	fmt.Println(fmt.Printf("%v\n", checkHealth))
+	response.Success(c, checkHealth)
 	return
 }
 
@@ -219,8 +314,8 @@ func realStopPlay() {
 // @produce json
 // @Param param body PingParam true "预览抓拍参数"
 // @router  /haikang/user/real/cap/picture [POST]
-// @success 200 {object} Response "获取成功"
-func realCapPicture() {
+// @success 200 {object} response.Response "获取成功"
+func realCapPicture(c *gin.Context) {
 	lRealPlayHandle := 1
 	CDto := C.struct_RealCapPictureDto{}
 
@@ -232,7 +327,7 @@ func realCapPicture() {
 	checkHealth := &PingParam{
 		Welcome: string(buffer),
 	}
-	fmt.Println(fmt.Printf("%v\n", checkHealth))
+	response.Success(c, checkHealth)
 	return
 }
 
@@ -241,12 +336,13 @@ func realCapPicture() {
 // @produce json
 // @Param param body PingParam true "设备抓拍参数"
 // @router  /haikang/user/cap/picture [POST]
-// @success 200 {object} Response "获取成功"
-func capPicture() {
-	param := LocalHealth(UserApi.Service.Health)
+// @success 200 {object} response.Response "获取成功"
+func capPicture(c *gin.Context) {
+	param := LocalHealth(UserApi.Service.Device)
 	C.checkHealth(&param, (C.ExceptionCallBack)(unsafe.Pointer(C.catchErrorCallback_cgo)))
 
 	lDto := C.struct_LoginDeviceDto{}
+	// 这里是登录设备scheme配置，不是nvr配置
 	scheme := GetCScheme(UserApi.Service.Scheme)
 	C.login(scheme, C.int(0), (*C.struct_LoginDeviceDto)(unsafe.Pointer(&lDto)))
 	lUserID := C.int(lDto.lUserID)
@@ -257,116 +353,11 @@ func capPicture() {
 	length := int(C.uint(CDto.lpSizeReturned))
 	buffer := GetStream(CDto.sJpegPicBuffer, length)
 
-	result, _ := UploadImg(buffer, OssPath)
+	result, _ := UploadImg(buffer, UserApi.Device.OssPath)
 	C.logout(lUserID)
 	checkHealth := &PingParam{
 		Welcome: result,
 	}
-	fmt.Println(fmt.Printf("%v\n", checkHealth))
+	response.Success(c, checkHealth)
 	return
-}
-
-// 转换CScheme唤醒海康摄像头
-func GetCScheme(scheme *s.Scheme) *C.struct_Scheme {
-	var CScheme C.struct_Scheme
-	CScheme = C.struct_Scheme{
-		channel:  C.uint(scheme.Channel),
-		port:     C.uint(scheme.Port),
-		address:  C.CString(scheme.Address),
-		username: C.CString(scheme.Username),
-		password: C.CString(scheme.Password),
-	}
-	return (*C.struct_Scheme)(unsafe.Pointer(&CScheme))
-}
-
-// 发现设备ip需要的参数
-func GetIpResolveParam(param *IPByResolveSvrParam) C.struct_IPByResolveSvrParam {
-	var CParam C.struct_IPByResolveSvrParam
-	CParam = C.struct_IPByResolveSvrParam{
-		sServerIP: C.CString(param.ServerIP),
-		wServerPort: C.ushort(param.ServerPort),
-		sDVRName: (*C.uchar)(unsafe.Pointer(C.CString(param.DVRName))),
-		sDVRSerialNumber: (*C.uchar)(unsafe.Pointer(C.CString(param.DVRSerialNumber))),
-	}
-
-	return CParam
-}
-
-// 获取本地服务器多网卡IP地址
-func GetLocalIp(strIp [16][16]C.char) []string {
-	var welcome []string
-	for i := 0; i < len(strIp); i++ {
-		var ipch []byte
-		for j := 0; j < len(strIp[i]); j++ {
-			if strIp[i][j] != 0 {
-				ipch = append(ipch, byte(strIp[i][j]))
-			}
-		}
-		welcome = append(welcome, string(ipch))
-	}
-
-	return welcome
-}
-
-// 抓拍图片流解析
-func GetStream(buf [204800]C.char, size int) []byte {
-	var out []byte
-	for i := 0; i < size; i++ {
-		out = append(out, byte(buf[i]))
-	}
-
-	return out
-}
-
-// SDK参数设置
-func LocalHealth(health *s.DeviceServiceHealth) C.struct_HealthParam {
-	var param C.struct_HealthParam
-	param = C.struct_HealthParam{
-		connectTime: C.int(health.ConnectTime),
-		recvTimeOut: C.int(health.RecvTimeOut),
-		reconnect: C.int(health.Reconnect),
-		logToFile: C.CString(health.LogToFile),
-		logLevel: C.uint(health.LogLevel),
-	}
-
-	return param
-}
-
-// UploadImg 上传图片
-func UploadImg(buf []byte, fileUploadPath string) (UploadImageResult, error) {
-	result := UploadImageResult{}
-	bodyBuf := bytes.NewBufferString("")
-	bodyWriter := multipart.NewWriter(bodyBuf)
-	// 创建一个文件句柄
-	ioWriter, err := bodyWriter.CreateFormFile("file", "cap.jpeg")
-	if err != nil {
-		return result, err
-	}
-	// 将图片流写入文件句柄
-	ioWriter.Write(buf)
-	boundary := bodyWriter.Boundary()
-	closeBuf := bytes.NewBufferString(fmt.Sprintf("\r\n--%s--\r\n", boundary))
-	requestReader := io.MultiReader(bodyBuf, closeBuf)
-	req, err := http.NewRequest("POST", fileUploadPath, requestReader)
-	if err != nil {
-		return result, err
-	}
-	req.Header.Add("Content-Type", "multipart/form-data; boundary="+boundary)
-	req.ContentLength = int64(bodyBuf.Len()) + int64(closeBuf.Len())
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return result, err
-	}
-
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return result, err
-	}
-
-	err = json.Unmarshal(body, &result)
-	if err != nil {
-		return result, err
-	}
-	return result, nil
 }

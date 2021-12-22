@@ -18,7 +18,7 @@ extern char* _cgo_topofstack(void);
 
 #define _cgo_msan_write(addr, sz)
 
-extern void _cgoexp_a66a9425af73_GoRealDataCallBack(void *);
+extern void _cgoexp_a2b2203c0382_GoRealDataCallBack(void *);
 
 CGO_NO_SANITIZE_THREAD
 void GoRealDataCallBack(int lRealHandle, unsigned int dwDataType, unsigned char* pBuffer, unsigned int dwBufSize, void* pUser)
@@ -40,11 +40,11 @@ void GoRealDataCallBack(int lRealHandle, unsigned int dwDataType, unsigned char*
 	_cgo_a.p3 = dwBufSize;
 	_cgo_a.p4 = pUser;
 	_cgo_tsan_release();
-	crosscall2(_cgoexp_a66a9425af73_GoRealDataCallBack, &_cgo_a, 32, _cgo_ctxt);
+	crosscall2(_cgoexp_a2b2203c0382_GoRealDataCallBack, &_cgo_a, 32, _cgo_ctxt);
 	_cgo_tsan_acquire();
 	_cgo_release_context(_cgo_ctxt);
 }
-extern void _cgoexp_a66a9425af73_GoCatchErrorCallback(void *);
+extern void _cgoexp_a2b2203c0382_GoCatchErrorCallback(void *);
 
 CGO_NO_SANITIZE_THREAD
 void GoCatchErrorCallback(unsigned int dwType, int lUserID, int lHandle, void* pUser)
@@ -64,21 +64,21 @@ void GoCatchErrorCallback(unsigned int dwType, int lUserID, int lHandle, void* p
 	_cgo_a.p2 = lHandle;
 	_cgo_a.p3 = pUser;
 	_cgo_tsan_release();
-	crosscall2(_cgoexp_a66a9425af73_GoCatchErrorCallback, &_cgo_a, 24, _cgo_ctxt);
+	crosscall2(_cgoexp_a2b2203c0382_GoCatchErrorCallback, &_cgo_a, 24, _cgo_ctxt);
 	_cgo_tsan_acquire();
 	_cgo_release_context(_cgo_ctxt);
 }
-extern void _cgoexp_a66a9425af73_GoAlarmMsgCallback(void *);
+extern void _cgoexp_a2b2203c0382_GoAlarmMsgCallback(void *);
 
 CGO_NO_SANITIZE_THREAD
-GoUint8 GoAlarmMsgCallback(int lCommand, void* pAlarmer, char* pAlarmInfo, unsigned int dwBufLen, void* pUser)
+GoUint8 GoAlarmMsgCallback(int lCommand, void* pAlarmer, void* pAlarmInfo, unsigned int dwBufLen, void* pUser)
 {
 	__SIZE_TYPE__ _cgo_ctxt = _cgo_wait_runtime_init_done();
 	typedef struct {
 		int p0;
 		char __pad0[4];
 		void* p1;
-		char* p2;
+		void* p2;
 		unsigned int p3;
 		char __pad1[4];
 		void* p4;
@@ -92,7 +92,7 @@ GoUint8 GoAlarmMsgCallback(int lCommand, void* pAlarmer, char* pAlarmInfo, unsig
 	_cgo_a.p3 = dwBufLen;
 	_cgo_a.p4 = pUser;
 	_cgo_tsan_release();
-	crosscall2(_cgoexp_a66a9425af73_GoAlarmMsgCallback, &_cgo_a, 41, _cgo_ctxt);
+	crosscall2(_cgoexp_a2b2203c0382_GoAlarmMsgCallback, &_cgo_a, 41, _cgo_ctxt);
 	_cgo_tsan_acquire();
 	_cgo_release_context(_cgo_ctxt);
 	return _cgo_a.r0;

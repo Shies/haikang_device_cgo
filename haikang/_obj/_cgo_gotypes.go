@@ -15,19 +15,198 @@ func _Cgo_ptr(ptr unsafe.Pointer) unsafe.Pointer { return ptr }
 var _Cgo_always_false bool
 //go:linkname _Cgo_use runtime.cgoUse
 func _Cgo_use(interface{})
+type _Ctype_BYTE = _Ctype_uchar
+
+type _Ctype_DWORD = _Ctype_uint
+
+type _Ctype_LONG = _Ctype_int
+
+type _Ctype_NET_DVR_AREAINFOCFG = _Ctype_struct_NET_DVR_AREAINFOCFG
+
+type _Ctype_NET_DVR_IPADDR = _Ctype_struct_NET_DVR_IPADDR
+
+type _Ctype_NET_VCA_BLOCKLIST_INFO = _Ctype_struct_NET_VCA_BLOCKLIST_INFO
+
+type _Ctype_NET_VCA_BLOCKLIST_INFO_ALARM = _Ctype_struct_NET_VCA_BLOCKLIST_INFO_ALARM
+
+type _Ctype_NET_VCA_DEV_INFO = _Ctype_struct_NET_VCA_DEV_INFO
+
+type _Ctype_NET_VCA_FACESNAP_INFO_ALARM = _Ctype_struct_NET_VCA_FACESNAP_INFO_ALARM
+
+type _Ctype_NET_VCA_HUMAN_ATTRIBUTE = _Ctype_struct_NET_VCA_HUMAN_ATTRIBUTE
+
+type _Ctype_NET_VCA_RECT = _Ctype_struct_NET_VCA_RECT
+
+type _Ctype_WORD = _Ctype_ushort
+
+type _Ctype__GoBytes_ []byte
+
+type _Ctype__GoString_ string
+
 type _Ctype_char int8
+
+type _Ctype_float float32
 
 type _Ctype_int int32
 
-//go:notinheap
-type _Ctype_struct_NET_DVR_ALARMER struct{}
+type _Ctype_intgo = _Ctype_ptrdiff_t
 
-//go:notinheap
-type _Ctype_struct_RealPlayInfo struct{}
+type _Ctype_long int64
+
+type _Ctype_ptrdiff_t = _Ctype_long
+
+type _Ctype_struct_NET_DVR_ALARMER struct {
+	byUserIDValid		_Ctype_BYTE
+	bySerialValid		_Ctype_BYTE
+	byVersionValid		_Ctype_BYTE
+	byDeviceNameValid	_Ctype_BYTE
+	byMacAddrValid		_Ctype_BYTE
+	byLinkPortValid		_Ctype_BYTE
+	byDeviceIPValid		_Ctype_BYTE
+	bySocketIPValid		_Ctype_BYTE
+	lUserID			_Ctype_LONG
+	sSerialNumber		[48]_Ctype_BYTE
+	dwDeviceVersion		_Ctype_DWORD
+	sDeviceName		[32]_Ctype_char
+	byMacAddr		[6]_Ctype_BYTE
+	wLinkPort		_Ctype_WORD
+	sDeviceIP		[128]_Ctype_char
+	sSocketIP		[128]_Ctype_char
+	byIpProtocol		_Ctype_BYTE
+	byRes1			[2]_Ctype_BYTE
+	bJSONBroken		_Ctype_BYTE
+	wSocketPort		_Ctype_WORD
+	byRes2			[6]_Ctype_BYTE
+}
+
+type _Ctype_struct_NET_DVR_AREAINFOCFG struct {
+	wNationalityID	_Ctype_WORD
+	wProvinceID	_Ctype_WORD
+	wCityID		_Ctype_WORD
+	wCountyID	_Ctype_WORD
+	dwCode		_Ctype_DWORD
+}
+
+type _Ctype_struct_NET_DVR_IPADDR struct {
+	sIpV4	[16]_Ctype_char
+	byIPv6	[128]_Ctype_BYTE
+}
+
+type _Ctype_struct_NET_VCA_BLOCKLIST_INFO struct {
+	dwSize			_Ctype_DWORD
+	dwRegisterID		_Ctype_DWORD
+	dwGroupNo		_Ctype_DWORD
+	byType			_Ctype_BYTE
+	byLevel			_Ctype_BYTE
+	byRes1			[2]_Ctype_BYTE
+	struAttribute		_Ctype_struct_NET_VCA_HUMAN_ATTRIBUTE
+	byRemark		[32]_Ctype_BYTE
+	dwFDDescriptionLen	_Ctype_DWORD
+	pFDDescriptionBuffer	*_Ctype_BYTE
+	dwFCAdditionInfoLen	_Ctype_DWORD
+	pFCAdditionInfoBuffer	*_Ctype_BYTE
+	dwThermalDataLen	_Ctype_DWORD
+	_			[4]byte
+}
+
+type _Ctype_struct_NET_VCA_BLOCKLIST_INFO_ALARM struct {
+	struBlockListInfo	_Ctype_struct_NET_VCA_BLOCKLIST_INFO
+	dwBlockListPicLen	_Ctype_DWORD
+	dwFDIDLen		_Ctype_DWORD
+	pFDID			*_Ctype_BYTE
+	dwPIDLen		_Ctype_DWORD
+	pPID			*_Ctype_BYTE
+	wThresholdValue		_Ctype_WORD
+	byIsNoSaveFDPicture	_Ctype_BYTE
+	byRealTimeContrast	_Ctype_BYTE
+	pBuffer1		*_Ctype_BYTE
+}
+
+type _Ctype_struct_NET_VCA_DEV_INFO struct {
+	struDevIP	_Ctype_struct_NET_DVR_IPADDR
+	wPort		_Ctype_WORD
+	byChannel	_Ctype_BYTE
+	byIvmsChannel	_Ctype_BYTE
+}
+
+type _Ctype_struct_NET_VCA_FACESNAP_INFO_ALARM struct {
+	dwRelativeTime		_Ctype_DWORD
+	dwAbsTime		_Ctype_DWORD
+	dwSnapFacePicID		_Ctype_DWORD
+	dwSnapFacePicLen	_Ctype_DWORD
+	struDevInfo		_Ctype_struct_NET_VCA_DEV_INFO
+	byFaceScore		_Ctype_BYTE
+	bySex			_Ctype_BYTE
+	byGlasses		_Ctype_BYTE
+	byAge			_Ctype_BYTE
+	byAgeDeviation		_Ctype_BYTE
+	byAgeGroup		_Ctype_BYTE
+	byFacePicQuality	_Ctype_BYTE
+	byRes			_Ctype_BYTE
+	dwUIDLen		_Ctype_DWORD
+	pUIDBuffer		*_Ctype_BYTE
+	fStayDuration		_Ctype_float
+	pBuffer1		*_Ctype_BYTE
+}
+
+type _Ctype_struct_NET_VCA_FACESNAP_MATCH_ALARM struct {
+	dwSize				_Ctype_DWORD
+	fSimilarity			_Ctype_float
+	struSnapInfo			_Ctype_struct_NET_VCA_FACESNAP_INFO_ALARM
+	struBlockListInfo		_Ctype_struct_NET_VCA_BLOCKLIST_INFO_ALARM
+	sStorageIP			[16]_Ctype_char
+	wStoragePort			_Ctype_WORD
+	byMatchPicNum			_Ctype_BYTE
+	byPicTransType			_Ctype_BYTE
+	dwSnapPicLen			_Ctype_DWORD
+	pSnapPicBuffer			*_Ctype_BYTE
+	struRegion			_Ctype_struct_NET_VCA_RECT
+	dwModelDataLen			_Ctype_DWORD
+	pModelDataBuffer		*_Ctype_BYTE
+	byModelingStatus		_Ctype_BYTE
+	byLivenessDetectionStatus	_Ctype_BYTE
+	cTimeDifferenceH		_Ctype_char
+	cTimeDifferenceM		_Ctype_char
+	byMask				_Ctype_BYTE
+	bySmile				_Ctype_BYTE
+	byContrastStatus		_Ctype_BYTE
+	byBrokenNetHttp			_Ctype_BYTE
+}
+
+type _Ctype_struct_NET_VCA_HUMAN_ATTRIBUTE struct {
+	bySex			_Ctype_BYTE
+	byCertificateType	_Ctype_BYTE
+	byBirthDate		[10]_Ctype_BYTE
+	byName			[32]_Ctype_BYTE
+	struNativePlace		_Ctype_struct_NET_DVR_AREAINFOCFG
+	byCertificateNumber	[32]_Ctype_BYTE
+	dwPersonInfoExtendLen	_Ctype_DWORD
+	pPersonInfoExtend	*_Ctype_BYTE
+	byAgeGroup		_Ctype_BYTE
+	byRes2			[3]_Ctype_BYTE
+	pThermalData		*_Ctype_BYTE
+	byRes3			[4]_Ctype_BYTE
+	_			[4]byte
+}
+
+type _Ctype_struct_NET_VCA_RECT struct {
+	fX	_Ctype_float
+	fY	_Ctype_float
+	fWidth	_Ctype_float
+	fHeight	_Ctype_float
+}
+
+type _Ctype_struct_RealPlayInfo struct {
+	szIP		[16]_Ctype_char
+	lUserID		_Ctype_LONG
+	lChannel	_Ctype_DWORD
+}
 
 type _Ctype_uchar uint8
 
 type _Ctype_uint uint32
+
+type _Ctype_ushort uint16
 
 type _Ctype_void [0]byte
 
@@ -40,10 +219,31 @@ func _cgoCheckPointer(interface{}, interface{})
 //go:linkname _cgoCheckResult runtime.cgoCheckResult
 func _cgoCheckResult(interface{})
 
+
+//go:linkname _cgo_runtime_gobytes runtime.gobytes
+func _cgo_runtime_gobytes(unsafe.Pointer, int) []byte
+
+func _Cfunc_GoBytes(p unsafe.Pointer, l _Ctype_int) []byte {
+	return _cgo_runtime_gobytes(p, int(l))
+}
+
+//go:linkname _cgo_runtime_gostring runtime.gostring
+func _cgo_runtime_gostring(*_Ctype_char) string
+
+func _Cfunc_GoString(p *_Ctype_char) string {
+	return _cgo_runtime_gostring(p)
+}
+
+//go:linkname _cgo_runtime_gostringn runtime.gostringn
+func _cgo_runtime_gostringn(*_Ctype_char, int) string
+
+func _Cfunc_GoStringN(p *_Ctype_char, l _Ctype_int) string {
+	return _cgo_runtime_gostringn(p, int(l))
+}
 //go:cgo_export_dynamic GoRealDataCallBack
-//go:linkname _cgoexp_a66a9425af73_GoRealDataCallBack _cgoexp_a66a9425af73_GoRealDataCallBack
-//go:cgo_export_static _cgoexp_a66a9425af73_GoRealDataCallBack
-func _cgoexp_a66a9425af73_GoRealDataCallBack(a *struct {
+//go:linkname _cgoexp_a2b2203c0382_GoRealDataCallBack _cgoexp_a2b2203c0382_GoRealDataCallBack
+//go:cgo_export_static _cgoexp_a2b2203c0382_GoRealDataCallBack
+func _cgoexp_a2b2203c0382_GoRealDataCallBack(a *struct {
 		p0 _Ctype_int
 		p1 _Ctype_uint
 		p2 *_Ctype_uchar
@@ -53,9 +253,9 @@ func _cgoexp_a66a9425af73_GoRealDataCallBack(a *struct {
 GoRealDataCallBack(a.p0, a.p1, a.p2, a.p3, a.p4)
 }
 //go:cgo_export_dynamic GoCatchErrorCallback
-//go:linkname _cgoexp_a66a9425af73_GoCatchErrorCallback _cgoexp_a66a9425af73_GoCatchErrorCallback
-//go:cgo_export_static _cgoexp_a66a9425af73_GoCatchErrorCallback
-func _cgoexp_a66a9425af73_GoCatchErrorCallback(a *struct {
+//go:linkname _cgoexp_a2b2203c0382_GoCatchErrorCallback _cgoexp_a2b2203c0382_GoCatchErrorCallback
+//go:cgo_export_static _cgoexp_a2b2203c0382_GoCatchErrorCallback
+func _cgoexp_a2b2203c0382_GoCatchErrorCallback(a *struct {
 		p0 _Ctype_uint
 		p1 _Ctype_int
 		p2 _Ctype_int
@@ -64,12 +264,12 @@ func _cgoexp_a66a9425af73_GoCatchErrorCallback(a *struct {
 GoCatchErrorCallback(a.p0, a.p1, a.p2, a.p3)
 }
 //go:cgo_export_dynamic GoAlarmMsgCallback
-//go:linkname _cgoexp_a66a9425af73_GoAlarmMsgCallback _cgoexp_a66a9425af73_GoAlarmMsgCallback
-//go:cgo_export_static _cgoexp_a66a9425af73_GoAlarmMsgCallback
-func _cgoexp_a66a9425af73_GoAlarmMsgCallback(a *struct {
+//go:linkname _cgoexp_a2b2203c0382_GoAlarmMsgCallback _cgoexp_a2b2203c0382_GoAlarmMsgCallback
+//go:cgo_export_static _cgoexp_a2b2203c0382_GoAlarmMsgCallback
+func _cgoexp_a2b2203c0382_GoAlarmMsgCallback(a *struct {
 		p0 _Ctype_int
 		p1 unsafe.Pointer
-		p2 *_Ctype_char
+		p2 unsafe.Pointer
 		p3 _Ctype_uint
 		p4 unsafe.Pointer
 		r0 bool

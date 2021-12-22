@@ -52,10 +52,10 @@ Scheme DeviceServiceIf::init(std::string addr, std::string user, std::string pas
 
 // SDK参数设置
 int DeviceServiceIf::ping(void *in, ExceptionCallBack g_ExceptionCallBack) {
-    NET_DVR_Init();
     int iRet;
 
     HealthParam param = *((HealthParam *)in);
+    // retry invoke default for 3
     NET_DVR_SetConnectTime(param.connectTime, 3);
     NET_DVR_SetRecvTimeOut(param.recvTimeOut);
     NET_DVR_SetReconnect(param.reconnect, true);
@@ -70,18 +70,47 @@ int DeviceServiceIf::ping(void *in, ExceptionCallBack g_ExceptionCallBack) {
         return HPR_ERROR;
     }
 
+    free(param.logToFile);
     //NET_DVR_Cleanup();
     return HPR_OK;
 }
 
-// 同步登录
-int DeviceServiceIf::login(BOOL useAysnc, void *dto) {
+// 初始化SDK资源
+int DeviceServiceIf::SDKInit() {
     NET_DVR_Init();
+    return HPR_OK;
+}
+
+// 释放SDK资源
+int DeviceServiceIf::clean() {
+    NET_DVR_Cleanup();
+    return HPR_OK;
+}
+
+// 设备是否活动状态
+int DeviceServiceIf::active(LONG lUserID, LONG *status) {
+    int iRet;
+
+    iRet = NET_DVR_RemoteControl(lUserID, NET_DVR_CHECK_USER_STATUS, NULL, 0);
+    if (!iRet)
+    {
+        printf("pyd1---active error, %d\n", NET_DVR_GetLastError());
+        *status = NET_DVR_GetLastError();
+        return HPR_ERROR;
+    }
+
+    *status = HPR_OK;
+    return HPR_OK;
+}
+
+// 同步登录
+int DeviceServiceIf::login(BOOL async, void *dto) {
     long lUserID;
+
     //login
     NET_DVR_USER_LOGIN_INFO struLoginInfo = {0};
     NET_DVR_DEVICEINFO_V40 struDeviceInfoV40 = {0};
-    struLoginInfo.bUseAsynLogin = useAysnc;
+    struLoginInfo.bUseAsynLogin = async;
 
     struLoginInfo.wPort = scheme->port;
     memcpy(struLoginInfo.sDeviceAddress, scheme->address, NET_DVR_DEV_ADDRESS_MAX_LEN);
@@ -98,24 +127,29 @@ int DeviceServiceIf::login(BOOL useAysnc, void *dto) {
     LoginDeviceDto *response = (LoginDeviceDto *)dto;
     memset(response, 0, sizeof(LoginDeviceDto));
     response->lUserID = lUserID;
+    memcpy(response->device.struDeviceV30.sSerialNumber, struDeviceInfoV40.struDeviceV30.sSerialNumber, strlen((char *)struDeviceInfoV40.struDeviceV30.sSerialNumber));
+    response->device.struDeviceV30.wDevType = struDeviceInfoV40.struDeviceV30.wDevType;
     response->device.struDeviceV30.byStartChan = struDeviceInfoV40.struDeviceV30.byStartChan;
 
+    free(scheme->address);
+    free(scheme->username);
+    free(scheme->password);
     //NET_DVR_Cleanup();
     return HPR_OK;
 }
 
 // 注销登录
 int DeviceServiceIf::logout(LONG lUserID) {
-    NET_DVR_Init();
-
+    //---------------------------------------
+    // 注销登录
     NET_DVR_Logout(lUserID);
-    NET_DVR_Cleanup();
+
+    //NET_DVR_Cleanup();
     return HPR_OK;
 }
 
 // 本地多网卡IP获取
 int DeviceServiceIf::localIp(void *dto) {
-    NET_DVR_Init();
     int iRet;
     char strIps[16][16];
 
@@ -140,22 +174,21 @@ int DeviceServiceIf::localIp(void *dto) {
 
 // 自动发现设备IP和端口
 int DeviceServiceIf::iPByResolveSvr(void *in, void *dto) {
-    NET_DVR_Init();
     int iRet;
     char sGetIp[16];
-    if ((IPByResolveSvrParam *)in == NULL)
+    if ((ResolveSvrParam *)in == NULL)
     {
         printf("pyd1---IPByResolveSvrParam error, %d\n", NET_DVR_GetLastError());
         return HPR_ERROR;
     }
 
-    IPByResolveSvrParam param = *((IPByResolveSvrParam *)in);
-    param.wDVRNameLen = strlen((char *)param.sDVRName);
+    ResolveSvrParam param = *((ResolveSvrParam *)in);
+    param.wDVRNameLen = 0;
     param.wDVRSerialLen = strlen((char *)param.sDVRSerialNumber);
 
-    IPByResolveSvrDto *response = (IPByResolveSvrDto *)dto;
-    memset(response, 0, sizeof(IPByResolveSvrDto));
-    iRet = NET_DVR_GetDVRIPByResolveSvr_EX(param.sServerIP, param.wServerPort, param.sDVRName, param.wDVRNameLen, \
+    ResolveSvrDto *response = (ResolveSvrDto *)dto;
+    memset(response, 0, sizeof(ResolveSvrDto));
+    iRet = NET_DVR_GetDVRIPByResolveSvr_EX(param.sServerIP, param.wServerPort, NULL, param.wDVRNameLen, \
             param.sDVRSerialNumber, param.wDVRSerialLen, sGetIp, &response->dwPort);
     if (!iRet)
     {
@@ -170,19 +203,108 @@ int DeviceServiceIf::iPByResolveSvr(void *in, void *dto) {
     return HPR_OK;
 }
 
-// 人脸侦测报警
-int DeviceServiceIf::setupAlarmChan(LONG lUserID, LONG *returnHandle, MessageCallback callback) {
-    NET_DVR_Init();
+// 远程扫描获取IPC信息列表。设备列表详情
+int DeviceServiceIf::getSadpInfoList(LONG lUserID, void *lpSadpInfoList) {
+    int iRet;
 
+    NET_DVR_SADPINFO_LIST resolve = {0};
+    resolve.dwSize = sizeof(resolve);
+
+    iRet = NET_DVR_GetSadpInfoList(lUserID, &resolve);
+    if (!iRet)
+    {
+        printf("pyd1---NET_DVR_GetSadpInfoList error, %d\n", NET_DVR_GetLastError());
+        return HPR_ERROR;
+    }
+
+    NET_DVR_SADPINFO_LIST *response = (NET_DVR_SADPINFO_LIST *)lpSadpInfoList;
+    memset(response, 0, sizeof(NET_DVR_SADPINFO_LIST));
+    memcpy(response, &resolve, sizeof(NET_DVR_SADPINFO_LIST));
+    return HPR_OK;
+}
+
+//人脸库管理，包括创建、修改、删除、查询等
+int DeviceServiceIf::stdXmlConfig(LONG lUserID, char *url, char *inbuf, char *outbuf, char *statbuf) {
+    NET_DVR_XML_CONFIG_INPUT param = {0};
+    param.dwSize = sizeof(NET_DVR_XML_CONFIG_INPUT);
+
+    NET_DVR_XML_CONFIG_OUTPUT response = {0};
+    response.dwSize = sizeof(NET_DVR_XML_CONFIG_OUTPUT);
+
+    char tempUrl[256];
+    char tempInBuf[1];
+    char tempOutBuf[1024 * 256];
+    char tempStatBuf[1024 * 10];
+
+    //不同功能对应不同URL
+    memcpy(tempUrl, url, strlen(url));
+    param.lpRequestUrl = tempUrl;
+    param.dwRequestUrlLen = strlen(tempUrl);
+
+    memcpy(tempInBuf, inbuf, strlen(inbuf));
+    param.lpInBuffer = tempInBuf;
+    param.dwInBufferSize = sizeof(tempInBuf);
+
+    response.lpOutBuffer = tempOutBuf;
+    response.dwOutBufferSize = sizeof(tempOutBuf);
+    response.lpStatusBuffer = tempStatBuf;
+    response.dwStatusSize = sizeof(tempStatBuf);
+
+    int iRet;
+    iRet = NET_DVR_STDXMLConfig(lUserID, &param, &response);
+    if (!iRet)
+    {
+        printf("pyd1---NET_DVR_STDXMLConfig error, %d\n", NET_DVR_GetLastError());
+        return HPR_ERROR;
+    }
+
+    char *lpoutbuf = (char *)response.lpOutBuffer;
+    for (int i = 0; i < strlen(lpoutbuf); i++) {
+        outbuf[i] = lpoutbuf[i];
+    }
+    char *lpstatbuf = (char *)response.lpStatusBuffer;
+    for (int i = 0; i < strlen(lpstatbuf); i++) {
+        statbuf[i] = lpstatbuf[i];
+    }
+
+    return HPR_OK;
+}
+
+// 获取人脸抓拍参数配置
+int DeviceServiceIf::getDVRConfig(LONG lUserID, LONG lChannel, void *dto) {
+    int iRet;
+
+    DWORD uiReturnLen;
+    NET_DVR_IPPARACFG_V40 struParams = {0};
+    struParams.dwSize = sizeof(struParams);
+
+    // dvr global config
+    iRet = NET_DVR_GetDVRConfig(lUserID, NET_DVR_GET_IPPARACFG_V40, lChannel, \
+        &struParams, sizeof(NET_DVR_IPPARACFG_V40), &uiReturnLen);
+    if (!iRet)
+    {
+        printf("pyd---NET_DVR_GetDVRConfig NET_DVR_GET_FACESNAPCFG error.%d\n",  NET_DVR_GetLastError());
+        return HPR_ERROR;
+    }
+
+    NET_DVR_IPPARACFG_V40 *response = (NET_DVR_IPPARACFG_V40 *)dto;
+    memset(response, 0, sizeof(NET_DVR_IPPARACFG_V40));
+    memcpy(response, &struParams, sizeof(NET_DVR_IPPARACFG_V40));
+    //NET_DVR_Cleanup();
+    return HPR_OK;
+}
+
+// 人脸比对报警
+int DeviceServiceIf::setupAlarmChan(LONG lUserID, LONG *returnHandle, MessageCallback callback) {
     //设置报警回调函数
     NET_DVR_SetDVRMessageCallBack_V31(callback, NULL);
 
     //启用布防
     LONG lHandle;
-    NET_DVR_SETUPALARM_PARAM  struAlarmParam = {0};
+    NET_DVR_SETUPALARM_PARAM struAlarmParam = {0};
     struAlarmParam.dwSize = sizeof(struAlarmParam);
-    struAlarmParam.byFaceAlarmDetection = 1; //人脸侦测报警，设备支持人脸侦测功能的前提下，上传COMM_ALARM_FACE_DETECTION类型报警信息
-    // 其他报警布防参数不需要设置，不支持
+    struAlarmParam.byAlarmTypeURL = 0;
+    // 人脸比对(报警类型为COMM_SNAP_MATCH_ALARM)中图片数据上传类型：0-二进制传输，1- URL传输
 
     lHandle = NET_DVR_SetupAlarmChan_V41(lUserID, &struAlarmParam);
     if (lHandle < 0)
@@ -197,8 +319,6 @@ int DeviceServiceIf::setupAlarmChan(LONG lUserID, LONG *returnHandle, MessageCal
 
 // 关闭人脸侦测报警
 int DeviceServiceIf::closeAlarmChan(LONG lHandle) {
-    NET_DVR_Init();
-
     //撤销布防上传通道
     if (!NET_DVR_CloseAlarmChan_V30(lHandle))
     {
@@ -209,35 +329,9 @@ int DeviceServiceIf::closeAlarmChan(LONG lHandle) {
     return HPR_OK;
 }
 
-// errno-23-设备不支持 系统参数配置
-int DeviceServiceIf::iPParaCfg(LONG lUserID, LONG lChannel, void *dto) {
-    NET_DVR_Init();
-    int iRet;
-    DWORD uiReturnLen = 0;
-
-    NET_DVR_IPPARACFG_V31 struParams = {0};
-    struParams.dwSize = sizeof(struParams);
-    iRet = NET_DVR_GetDVRConfig(lUserID,  NET_DVR_GET_IPPARACFG_V31, lChannel, \
-        &struParams, sizeof(NET_DVR_IPPARACFG_V31), &uiReturnLen);
-    if (!iRet)
-    {
-        printf("pyd---NET_DVR_GetDVRConfig NET_DVR_GET_IPPARACFG_V31 error.%d\n",  NET_DVR_GetLastError());
-        return HPR_ERROR;
-    }
-
-    IPParaCfgDto *response = (IPParaCfgDto *)dto;
-    memset(response, 0, sizeof(IPParaCfgDto));
-    response->uiReturnLen = uiReturnLen;
-
-    //NET_DVR_Cleanup();
-    return HPR_OK;
-}
-
 // 实时预览
 int DeviceServiceIf::realPlay(void *in, StdDataCallBack fStdDataCallBack) {
     //---------------------------------------
-    // 初始化
-    NET_DVR_Init();
     if ((RealPlayParam *)in == NULL)
     {
         printf("pyd1---RealPlayParam error, %d\n", NET_DVR_GetLastError());
@@ -275,7 +369,6 @@ int DeviceServiceIf::realPlay(void *in, StdDataCallBack fStdDataCallBack) {
 
 // 关闭预览
 int DeviceServiceIf::realStopPlay(LONG lRealPlayHandle) {
-    NET_DVR_Init();
     //---------------------------------------
     //关闭预览
     NET_DVR_StopRealPlay(lRealPlayHandle);
@@ -286,8 +379,6 @@ int DeviceServiceIf::realStopPlay(LONG lRealPlayHandle) {
 // 预览抓图
 int DeviceServiceIf::realCapPicture(LONG lRealPlayHandle, void *dto) {
     //---------------------------------------
-    // 初始化
-    NET_DVR_Init();
     int iRet;
     char sBuf[204800];
 
@@ -307,7 +398,6 @@ int DeviceServiceIf::realCapPicture(LONG lRealPlayHandle, void *dto) {
 
 // 设备抓图
 int DeviceServiceIf::capPicture(LONG lUserID, LONG lChannel, void *dto) {
-    NET_DVR_Init();
     int iRet;
     char sBuf[204800];
 
@@ -328,6 +418,25 @@ int DeviceServiceIf::capPicture(LONG lUserID, LONG lChannel, void *dto) {
     memcpy(response->sJpegPicBuffer, sBuf, response->lpSizeReturned);
     response->wPicSize = strPicPara.wPicSize;
     response->wPicQuality = strPicPara.wPicQuality;
+    //NET_DVR_Cleanup();
+    return HPR_OK;
+}
+
+// 获取图片流
+int DeviceServiceIf::getPicture(LONG lUserID, char *sDVRFileName, void *dto) {
+    int iRet;
+    char sBuf[204800];
+
+    CapPictureDto *response = (CapPictureDto *)dto;
+    memset(response, 0, sizeof(CapPictureDto));
+    iRet = NET_DVR_GetPicture_V30(lUserID, sDVRFileName, sBuf, sizeof(sBuf), &response->lpSizeReturned);
+    if (!iRet)
+    {
+        printf("pyd1---NET_DVR_GetPicture_V30 error, %d\n", NET_DVR_GetLastError());
+        return HPR_ERROR;
+    }
+
+    memcpy(response->sJpegPicBuffer, sBuf, response->lpSizeReturned);
     //NET_DVR_Cleanup();
     return HPR_OK;
 }

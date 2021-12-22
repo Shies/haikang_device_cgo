@@ -21,6 +21,16 @@ static size_t _GoStringLen(_GoString_ s) { return (size_t)s.n; }
 __attribute__ ((unused))
 static const char *_GoStringPtr(_GoString_ s) { return s.p; }
 
+#line 3 "/home/zhaoxuewang/go_device_haikang/app/api/haikang/gocallback.go"
+
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "DeviceHandler.h"
+
+#line 1 "cgo-generated-wrapper"
 
 
 #line 1 "cgo-gcc-prolog"

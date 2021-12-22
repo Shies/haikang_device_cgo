@@ -7,6 +7,6 @@ void _cgo_allocate(void *a, int c) { }
 void _cgo_panic(void *a, int c) { }
 void _cgo_reginit(void) { }
 #line 1 "cgo-generated-wrappers"
-void _cgoexp_a66a9425af73_GoRealDataCallBack(void* p){}
-void _cgoexp_a66a9425af73_GoCatchErrorCallback(void* p){}
-void _cgoexp_a66a9425af73_GoAlarmMsgCallback(void* p){}
+void _cgoexp_a2b2203c0382_GoRealDataCallBack(void* p){}
+void _cgoexp_a2b2203c0382_GoCatchErrorCallback(void* p){}
+void _cgoexp_a2b2203c0382_GoAlarmMsgCallback(void* p){}
